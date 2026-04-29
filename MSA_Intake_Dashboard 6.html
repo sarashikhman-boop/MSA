@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MSA Intake Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --border: #e4e2db;
+    --border-strong: #c8c5bc;
+    --text-primary: #1a1916;
+    --text-secondary: #6b6860;
+    --text-tertiary: #9e9b95;
+    --purple: #5b4fcf;
+    --purple-light: #eeecfb;
+    --purple-dark: #3d3491;
+    --green: #1a7f5a;
+    --green-light: #e4f4ed;
+    --green-dark: #0d5c40;
+    --coral-light: #fdf0eb;
+    --coral-text: #8c3a1a;
+    --amber-light: #fdf6e3;
+    --amber-text: #7a5500;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04);
+    --shadow-lg: 0 4px 24px rgba(0,0,0,0.10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .header-logo {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--purple); display: flex; align-items: center; justify-content: center;
+  }
+  .header-logo svg { width: 18px; height: 18px; }
+  .header-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+  .header-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 1px; }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .step-dots { display: flex; gap: 6px; align-items: center; }
+  .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: all 0.3s; }
+  .step-dot.active { background: var(--purple); transform: scale(1.2); }
+  .step-dot.done { background: var(--green); }
+  .step-label-hdr { font-size: 12px; color: var(--text-tertiary); font-family: 'DM Mono', monospace; }
+
+  /* Layout */
+  .layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 65px); }
+
+  /* Sidebar */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    position: sticky;
+    top: 65px;
+    height: calc(100vh - 65px);
+    overflow-y: auto;
+  }
+  .sidebar-steps { list-style: none; }
+  .sidebar-step {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 20px; cursor: pointer;
+    transition: background 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .sidebar-step:hover { background: var(--bg); }
+  .sidebar-step.active { background: var(--purple-light); border-left-color: var(--purple); }
+  .sidebar-step.done .step-num { background: var(--green); color: white; }
+  .sidebar-step.active .step-num { background: var(--purple); color: white; }
+  .step-num {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--border); color: var(--text-tertiary);
+    font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px; transition: all 0.2s;
+  }
+  .step-check { display: none; }
+  .sidebar-step.done .step-check { display: block; }
+  .sidebar-step.done .step-num-inner { display: none; }
+  .step-info {}
+  .step-title { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+  .sidebar-step.active .step-title { color: var(--purple); }
+  .sidebar-step.done .step-title { color: var(--text-secondary); }
+  .step-desc { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; line-height: 1.4; }
+
+  /* Main */
+  .main { padding: 32px 40px 80px; max-width: 780px; }
+
+  .section { display: none; animation: fadeIn 0.2s ease; }
+  .section.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .section-header { margin-bottom: 24px; }
+  .section-header h1 { font-size: 22px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+  .section-header p { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
+  .step-pill {
+    display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 10px;
+    border-radius: 20px; background: var(--purple-light); color: var(--purple);
+    margin-bottom: 12px; font-family: 'DM Mono', monospace;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-size: 11px; font-weight: 600; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 16px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Fields */
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .field-grid.full { grid-template-columns: 1fr; }
+  .field-grid:last-child { margin-bottom: 0; }
+  .fg { display: flex; flex-direction: column; gap: 5px; }
+  .fg label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
+  .fg input, .fg select, .fg textarea {
+    font-family: 'DM Sans', sans-serif; font-size: 14px;
+    padding: 9px 12px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); background: var(--bg);
+    color: var(--text-primary); width: 100%; transition: all 0.15s;
+    appearance: none; -webkit-appearance: none;
+  }
+  .fg select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6860' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px; }
+  .fg input:focus, .fg select:focus, .fg textarea:focus { outline: none; border-color: var(--purple); background: var(--surface); box-shadow: 0 0 0 3px rgba(91,79,207,0.08); }
+  .fg textarea { resize: vertical; min-height: 80px; }
+  .hint { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; }
+
+  /* Template cards */
+  .tpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .tpl-card {
+    border: 1.5px solid var(--border); border-radius: var(--radius);
+    padding: 16px; cursor: pointer; transition: all 0.15s; position: relative;
+    background: var(--surface);
+  }
+  .tpl-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow); transform: translateY(-1px); }
+  .tpl-card.selected { border-color: var(--purple); background: var(--purple-light); box-shadow: 0 0 0 3px rgba(91,79,207,0.1); }
+  .tpl-name { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+  .tpl-use { font-size: 11px; color: var(--text-tertiary); margin-bottom: 8px; }
+  .rep-badge {
+    display: inline-block; font-size: 10px; font-weight: 600;
+    padding: 2px 8px; border-radius: 20px; margin-bottom: 8px;
+  }
+  .rep-np-practice, .rep-md-practice { background: var(--coral-light); color: var(--coral-text); }
+  .rep-mso, .rep-mso-np { background: var(--green-light); color: var(--green-dark); }
+  .rep-dual-md, .rep-dual-np { background: var(--purple-light); color: var(--purple-dark); }
+  .tpl-detail { font-size: 11px; color: var(--text-secondary); line-height: 1.6; }
+  .tpl-pip { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .pip { font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 20px; border: 1px solid var(--border); color: var(--text-tertiary); background: var(--bg); }
+  .pip-on { background: var(--green-light); color: var(--green-dark); border-color: #9ed8c0; }
+  .check-mark {
+    position: absolute; top: 12px; right: 12px; width: 18px; height: 18px;
+    border-radius: 50%; background: var(--purple); display: none;
+    align-items: center; justify-content: center;
+  }
+  .tpl-card.selected .check-mark { display: flex; }
+  .check-mark svg { width: 10px; height: 10px; }
+
+  /* Toggles */
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 0; border-bottom: 1px solid var(--border);
+  }
+  .toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .tl-label { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+  .tl-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+  .toggle { position: relative; width: 38px; height: 22px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .toggle-track {
+    position: absolute; inset: 0; background: var(--border-strong);
+    border-radius: 11px; cursor: pointer; transition: background 0.2s;
+  }
+  .toggle input:checked + .toggle-track { background: var(--purple); }
+  .toggle-thumb {
+    position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+    background: white; border-radius: 50%; transition: transform 0.2s;
+    pointer-events: none; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle input:checked ~ .toggle-thumb { transform: translateX(16px); }
+
+  /* Callout */
+  .callout {
+    border-radius: var(--radius-sm); padding: 12px 14px;
+    font-size: 12px; margin-bottom: 16px; line-height: 1.5;
+    border: 1px solid;
+  }
+  .callout-info { background: #eff6ff; color: #1e4fa0; border-color: #bfdbfe; }
+  .callout-warn { background: var(--amber-light); color: var(--amber-text); border-color: #fcd34d; }
+
+  /* Review summary */
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  .metric {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px;
+  }
+  .metric-label { font-size: 10px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+  .metric-value { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+  .metric-value.accent { color: var(--purple); }
+  .review-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; gap: 16px;
+  }
+  .review-row:last-child { border-bottom: none; }
+  .review-key { color: var(--text-secondary); white-space: nowrap; min-width: 180px; }
+  .review-val { color: var(--text-primary); font-weight: 500; text-align: right; }
+
+  /* Nav */
+  .nav-bar {
+    position: fixed; bottom: 0; left: 220px; right: 0;
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 14px 40px; display: flex; justify-content: space-between; align-items: center;
+    z-index: 50;
+  }
+  .btn {
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+    padding: 9px 20px; border-radius: var(--radius-sm); cursor: pointer;
+    border: 1.5px solid var(--border-strong); background: var(--surface);
+    color: var(--text-primary); transition: all 0.15s;
+  }
+  .btn:hover { background: var(--bg); }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--purple); border-color: var(--purple); color: white; }
+  .btn-primary:hover { background: var(--purple-dark); border-color: var(--purple-dark); }
+  .btn-generate {
+    background: var(--green); border-color: var(--green); color: white;
+    font-size: 14px; font-weight: 600; padding: 10px 28px;
+  }
+  .btn-generate:hover { background: var(--green-dark); border-color: var(--green-dark); }
+  .btn-copy {
+    background: var(--green); border-color: var(--green); color: white;
+    font-size: 13px; font-weight: 500; padding: 9px 20px;
+  }
+  .btn-copy:hover { background: var(--green-dark); }
+  .nav-step { font-size: 12px; color: var(--text-tertiary); font-family: 'DM Mono', monospace; }
+
+  /* Output modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: none; align-items: center; justify-content: center; z-index: 200;
+    padding: 24px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border-radius: var(--radius);
+    box-shadow: var(--shadow-lg); width: 100%; max-width: 700px;
+    max-height: 80vh; display: flex; flex-direction: column;
+  }
+  .modal-header {
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-header h2 { font-size: 16px; font-weight: 600; }
+  .modal-close { cursor: pointer; color: var(--text-tertiary); background: none; border: none; font-size: 20px; line-height: 1; padding: 2px; }
+  .modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+  .modal-body pre {
+    font-family: 'DM Mono', monospace; font-size: 12px;
+    color: var(--text-primary); white-space: pre-wrap; line-height: 1.7;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 16px;
+  }
+  .modal-footer {
+    padding: 16px 24px; border-top: 1px solid var(--border);
+    display: flex; gap: 10px; justify-content: flex-end;
+  }
+  .copy-confirm { font-size: 12px; color: var(--green); display: none; align-items: center; gap: 4px; }
+  .copy-confirm.show { display: flex; }
+
+  /* Collapsed nc details */
+  #ncDetails { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14,2 14,8 20,8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10,9 9,9 8,9"/>
+      </svg>
+    </div>
+    <div>
+      <div class="header-title">MSA Intake Dashboard</div>
+      <div class="header-sub">Management Services Agreement</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="step-dots" id="stepDots"></div>
+    <div class="step-label-hdr" id="stepLabelHdr">Step 1 / 5</div>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="sidebar">
+    <ul class="sidebar-steps" id="sidebarSteps">
+      <li class="sidebar-step active" onclick="jumpTo(0)">
+        <div class="step-num"><span class="step-num-inner">1</span><svg class="step-check" viewBox="0 0 10 8" fill="none" width="10" height="10"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-info"><div class="step-title">Template</div><div class="step-desc">Select who you represent</div></div>
+      </li>
+      <li class="sidebar-step" onclick="jumpTo(1)">
+        <div class="step-num"><span class="step-num-inner">2</span><svg class="step-check" viewBox="0 0 10 8" fill="none" width="10" height="10"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-info"><div class="step-title">Parties</div><div class="step-desc">Entities &amp; signatories</div></div>
+      </li>
+      <li class="sidebar-step" onclick="jumpTo(2)">
+        <div class="step-num"><span class="step-num-inner">3</span><svg class="step-check" viewBox="0 0 10 8" fill="none" width="10" height="10"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-info"><div class="step-title">Dates &amp; Term</div><div class="step-desc">Effective date, premises</div></div>
+      </li>
+      <li class="sidebar-step" onclick="jumpTo(3)">
+        <div class="step-num"><span class="step-num-inner">4</span><svg class="step-check" viewBox="0 0 10 8" fill="none" width="10" height="10"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-info"><div class="step-title">Compensation</div><div class="step-desc">Fees &amp; comp structure</div></div>
+      </li>
+      <li class="sidebar-step" onclick="jumpTo(4)">
+        <div class="step-num"><span class="step-num-inner">5</span><svg class="step-check" viewBox="0 0 10 8" fill="none" width="10" height="10"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="step-info"><div class="step-title">Provisions &amp; Review</div><div class="step-desc">Key terms &amp; summary</div></div>
+      </li>
+    </ul>
+  </nav>
+
+  <main class="main">
+
+    <!-- STEP 0: Template -->
+    <div id="s0" class="section active">
+      <div class="section-header">
+        <div class="step-pill">Step 1 of 5</div>
+        <h1>Select template</h1>
+        <p>Choose the MSA template based on who Lengea represents in this deal.</p>
+      </div>
+      <div class="tpl-grid">
+        <div class="tpl-card" onclick="selectTemplate('capsule', this)">
+          <div class="check-mark"><svg viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="tpl-name">1A &nbsp;·&nbsp; MSO-Friendly Template</div>
+          <div class="tpl-use">Where counterparty is a physician's entity</div>
+          <div><span class="rep-badge rep-mso">Rep: MSO only</span></div>
+          <div style="font-size:11px; font-weight:600; color:#B91C1C; margin-bottom:3px;">Counterparty: MD-owned entity</div>
+          <div class="tpl-detail">New York · $1,000/mo MD comp · Practice owns records</div>
+          <div class="tpl-pip"><span class="pip pip-on">MSO security interest in A/R</span><span class="pip pip-on">Acct recourse capped</span></div>
+        </div>
+        <div class="tpl-card" onclick="selectTemplate('moore', this)">
+          <div class="check-mark"><svg viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="tpl-name">1B &nbsp;·&nbsp; MSO-Friendly Template</div>
+          <div class="tpl-use">Where counterparty is an NP's entity</div>
+          <div><span class="rep-badge rep-mso-np">Rep: MSO only</span></div>
+          <div style="font-size:11px; font-weight:600; color:#B91C1C; margin-bottom:3px;">Counterparty: NP-owned entity</div>
+          <div class="tpl-detail">New York · $500/mo NP comp</div>
+          <div class="tpl-pip"><span class="pip pip-on">MSO security interest in A/R</span><span class="pip">No expansion clause</span></div>
+        </div>
+        <div class="tpl-card" onclick="selectTemplate('shahzad', this)">
+          <div class="check-mark"><svg viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="tpl-name">2A &nbsp;·&nbsp; Balanced Template</div>
+          <div class="tpl-use">Where we rep both the MSO and MD entity</div>
+          <div><span class="rep-badge rep-dual-md">Rep: MD Practice &amp; MSO</span></div>
+          <div class="tpl-detail">MD-owned corp · New York · $1,000/mo MD comp</div>
+          <div class="tpl-pip"><span class="pip">No security interest</span><span class="pip">No expansion clause</span></div>
+        </div>
+        <div class="tpl-card" onclick="selectTemplate('mck', this)">
+          <div class="check-mark"><svg viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="tpl-name">2B &nbsp;·&nbsp; Balanced Template</div>
+          <div class="tpl-use">Where we rep both the MSO and NP entity</div>
+          <div><span class="rep-badge rep-dual-np">Rep: NP Practice &amp; MSO</span></div>
+          <div class="tpl-detail">NP full practice authority · New York · $1,000/mo MD comp</div>
+          <div class="tpl-pip"><span class="pip">No security interest</span><span class="pip">No expansion clause</span></div>
+        </div>
+        <div class="tpl-card" onclick="selectTemplate('co_pllc', this)">
+          <div class="check-mark"><svg viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="tpl-name">3A &nbsp;·&nbsp; NP-Friendly Template</div>
+          <div class="tpl-use">Where we rep the NP or NP entity, not the MSO</div>
+          <div style="font-size:10px; color:#712B13; margin-top:2px;">&#9888; NY law: entity must be PLLC or PC</div>
+          <div><span class="rep-badge rep-np-practice">Rep: NP Practice only</span></div>
+          <div class="tpl-detail">NP-owned PLLC or PC · New York · $500/mo NP comp</div>
+          <div class="tpl-pip"><span class="pip pip-on">Expansion Event</span><span class="pip pip-on">Manager pays insurance</span><span class="pip" style="background:#FAECE7;color:#712B13;border-color:#F0997B;">PLLC or PC only</span></div>
+        </div>
+        <div class="tpl-card" onclick="selectTemplate('nuwell', this)">
+          <div class="check-mark"><svg viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="tpl-name">3B &nbsp;·&nbsp; MD-Friendly Template</div>
+          <div class="tpl-use">Where we rep the MD or MD entity, not the MSO</div>
+          <div><span class="rep-badge rep-md-practice">Rep: MD/PC Practice only</span></div>
+          <div style="font-size:10px; color:#712B13; margin-top:2px;">⚠ NY law: entity must be PLLC or PC</div>
+          <div class="tpl-detail">MD-owned PLLC or PC · New York · $1,000/mo MD comp · 30-day term w/o cause</div>
+          <div class="tpl-pip"><span class="pip pip-on">Expansion Event</span><span class="pip pip-on">Manager pays insurance</span><span class="pip" style="background:#FAECE7;color:#712B13;border-color:#F0997B;">PLLC or PC only</span></div>
+        </div>
+      </div>
+            <div id="tplCallout" style="display:none;"></div>
+    </div>
+
+    <!-- STEP 1: Parties -->
+    <div id="s1" class="section">
+      <div class="section-header">
+        <div class="step-pill">Step 2 of 5</div>
+        <h1>Parties</h1>
+        <p>Entity names, signatories, and Medical Director details.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Manager (MSO)</div>
+        <div class="field-grid">
+          <div class="fg">
+            <label>Legal entity name</label>
+            <input type="text" id="mgrEntity" placeholder="e.g. Acme Management LLC" onblur="checkMgrEntityName()">
+            <span class="hint">Include the exact legal ending — LLC, Inc., Corp., PLLC, etc.</span>
+          </div>
+          <div id="mgrEntityWarning" style="display:none; margin-top:8px; background:#fdf6e3; border:1px solid #fcd34d; border-radius:6px; padding:10px 12px; font-size:12px; color:#7a5500; line-height:1.6; grid-column: 1 / -1;">
+            <strong>Possible template mismatch.</strong> The Manager entity name contains the word "Medical." NP-practice templates (NP-Friendly, MSO-Friendly NP counterparty) are intended for non-physician-owned practices managed by a non-medical MSO. If this is a medically-owned or physician-run MSO, consider using the <strong>MSO-Friendly Template (physician counterparty)</strong>, <strong>Balanced Template (MSO + MD entity)</strong>, or <strong>Balanced Template (MSO + NP entity)</strong> instead.
+          </div>
+          <div class="fg"><label>DBA / brand name</label><input type="text" id="mgrDBA" placeholder="e.g. Glow Med Spa"></div>
+        </div>
+        <div class="field-grid">
+          <div class="fg"><label>Owner / signatory</label><input type="text" id="mgrOwner" placeholder="e.g. Natalia Nascimento"></div>
+          <div class="fg"><label>Title</label><input type="text" id="mgrTitle" placeholder="Owner"></div>
+        </div>
+        <div class="field-grid full">
+          <div class="fg"><label>State of formation</label>
+            <select id="mgrState">
+              <option value="">— select —</option>
+              <option>New York</option><option>California</option><option>Texas</option>
+              <option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option>
+              <option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>Florida</option>
+              <option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option>
+              <option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option>
+              <option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option>
+              <option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option>
+              <option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option>
+              <option>New Jersey</option><option>New Mexico</option><option>North Carolina</option><option>North Dakota</option>
+              <option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option>
+              <option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option>
+              <option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option>
+              <option>Washington D.C.</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Practice</div>
+        <div class="field-grid">
+          <div class="fg"><label>Legal entity name</label><input type="text" id="pracEntity" placeholder="e.g. Balanced Template"></div>
+          <div class="fg"><label>DBA / operating name</label><input type="text" id="pracDBA" placeholder="e.g. Anwar Aesthetics"></div>
+        </div>
+        <div class="field-grid">
+          <div class="fg"><label>Owner / signatory</label><input type="text" id="pracOwner" placeholder="e.g. Shahzad Anwar"></div>
+          <div class="fg"><label>Credential</label><input type="text" id="pracCred" placeholder="M.D. / N.P. / D.O." onblur="checkTemplateMismatchFromCred()"></div>
+        </div>
+        <div class="field-grid">
+          <div class="fg"><label>Entity type</label>
+            <select id="entityType" onchange="checkEntityType()">
+              <option value="">— select —</option>
+              <option>PLLC</option><option>Corporation (Inc. / PC)</option><option>LLC</option>
+            </select>
+          </div>
+          <div class="fg"><label>Owner type</label>
+            <select id="ownerType" onchange="checkTemplateMismatch(); checkEntityType()">
+              <option value="">— select —</option>
+              <option>MD / Physician</option><option>Nurse Practitioner</option><option>Physician Assistant</option>
+            </select>
+          </div>
+        </div>
+        <div id="entityTypeWarning" style="display:none; margin-top:10px; background:#fdf6e3; border:1px solid #fcd34d; border-radius:6px; padding:10px 14px; font-size:12px; color:#7a5500; line-height:1.6;">
+            <strong>NY law — entity type issue.</strong> New York does not permit LLCs or standard corporations (Inc.) to provide medical services. Physician-owned and NP-owned practices in New York must be organized as a <strong>PLLC or PC (Professional Corporation)</strong>. Please confirm the entity type with your client before drafting.
+          </div>
+          <div id="mismatchWarning" style="display:none; margin-top:12px; background:#fdf6e3; border:1px solid #fcd34d; border-radius:6px; padding:12px 14px; font-size:12px; color:#7a5500; line-height:1.6;">
+          <strong>Template mismatch.</strong> The selected template is for an <span id="mismatchExpected"></span>-owned practice, but you have entered a <span id="mismatchActual"></span>. Please go back to Step 1 and select the correct template — <span id="mismatchSuggestion"></span>.
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Medical Director / Practice Professional</div>
+        <div class="field-grid">
+          <div class="fg"><label>Name</label><input type="text" id="mdName" placeholder="Same as practice owner if blank"></div>
+          <div class="fg"><label>Credential</label><input type="text" id="mdCred" placeholder="M.D. / N.P."></div>
+        </div>
+        <div class="field-grid full">
+          <div class="fg">
+            <label>Consulting entity (if comp routed separately)</label>
+            <input type="text" id="mdConsultCo" placeholder="e.g. Disho Consulting LLC — leave blank if N/A">
+            <span class="hint">Used in template 3B (MD-Friendly)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Dates & Term -->
+    <div id="s2" class="section">
+      <div class="section-header">
+        <div class="step-pill">Step 3 of 5</div>
+        <h1>Dates, term &amp; premises</h1>
+        <p>Effective date, term length, governing state, and practice location.</p>
+      </div>
+      <div class="card">
+        <div class="field-grid">
+          <div class="fg"><label>Effective date</label><input type="date" id="effectiveDate"></div>
+          <div class="fg"><label>ICA / companion agreement date</label><input type="date" id="icaDate"><span class="hint">Independent Contractor Agreement date</span></div>
+        </div>
+        <div class="field-grid">
+          <div class="fg"><label>Initial term</label>
+            <select id="initialTerm">
+              <option value="12mo" selected>12 months</option>
+              <option value="6mo">6 months</option>
+              <option value="24mo">24 months</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div class="fg" id="renewalNoticeFG"><label>Non-renewal notice (days)</label><input type="number" id="renewalNotice" value="90"><span class="hint">Days required to prevent auto-renewal</span></div>
+        </div>
+        <div class="field-grid" id="customTermRow" style="display:none;">
+          <div class="fg"><label>Custom term (months)</label><input type="number" id="customTermVal" min="1" placeholder="e.g. 18"></div>
+          <div></div>
+        </div>
+        <div class="field-grid">
+          <div class="fg"><label>Governing state</label>
+            <select id="govState">
+              <option value="">— select —</option>
+              <option>New York</option><option>California</option><option>Texas</option>
+              <option>Alabama</option><option>Alaska</option><option>Arizona</option><option>Arkansas</option>
+              <option>Colorado</option><option>Connecticut</option><option>Delaware</option><option>Florida</option>
+              <option>Georgia</option><option>Hawaii</option><option>Idaho</option><option>Illinois</option>
+              <option>Indiana</option><option>Iowa</option><option>Kansas</option><option>Kentucky</option>
+              <option>Louisiana</option><option>Maine</option><option>Maryland</option><option>Massachusetts</option>
+              <option>Michigan</option><option>Minnesota</option><option>Mississippi</option><option>Missouri</option>
+              <option>Montana</option><option>Nebraska</option><option>Nevada</option><option>New Hampshire</option>
+              <option>New Jersey</option><option>New Mexico</option><option>North Carolina</option><option>North Dakota</option>
+              <option>Ohio</option><option>Oklahoma</option><option>Oregon</option><option>Pennsylvania</option>
+              <option>Rhode Island</option><option>South Carolina</option><option>South Dakota</option><option>Tennessee</option>
+              <option>Utah</option><option>Vermont</option><option>Virginia</option><option>Washington</option>
+              <option>Washington D.C.</option><option>West Virginia</option><option>Wisconsin</option><option>Wyoming</option>
+            </select>
+          </div>
+          <div class="fg"><label>Arbitration county</label><input type="text" id="arbCounty" placeholder="e.g. Hudson / Placer / Philadelphia"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Premises</div>
+        <div class="field-grid full">
+          <div class="fg"><label>Practice address</label><input type="text" id="premisesAddress" placeholder="e.g. 1 Main Street, Brooklyn, NY 11235"><span class="hint">Write in full — no street abbreviations. Format exactly: 1 Main Street, Brooklyn, NY 11235</span></div>
+        </div>
+        <div class="field-grid">
+          <div class="fg"><label>Number of locations</label><input type="number" id="locationCount" value="1" min="1"></div>
+          <div class="fg"><label>Additional addresses</label><input type="text" id="additionalLocations" placeholder="Leave blank if single location"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Compensation -->
+    <div id="s3" class="section">
+      <div class="section-header">
+        <div class="step-pill">Step 4 of 5</div>
+        <h1>Compensation</h1>
+        <p>Management fee, professional comp, and termination notice periods.</p>
+      </div>
+      <div id="tplCompHint" class="callout callout-info" style="display:none;"></div>
+      <div class="card">
+        <div class="card-title">Management fee</div>
+        <div class="field-grid">
+          <div class="fg"><label>Monthly fee ($)</label><input type="number" id="mgmtFee" value="10000"></div>
+          <div class="fg"><label>Fee basis</label>
+            <select id="feeStructure">
+              <option value="flat">Fixed flat monthly</option>
+              <option value="perLocation">Per location</option>
+              <option value="blank">Leave blank / TBD</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Practice Professional compensation</div>
+        <div class="field-grid">
+          <div class="fg"><label>Comp type</label>
+            <select id="mdCompType" onchange="toggleMDComp()">
+              <option value="flat">Fixed monthly</option>
+              <option value="scaled">Scaled / escalating</option>
+              <option value="hourly">Hourly</option>
+              <option value="blank">Leave blank / TBD</option>
+            </select>
+          </div>
+          <div class="fg" id="mdFlatFG"><label>Monthly rate ($)</label><input type="number" id="mdFlatRate" placeholder="e.g. 1000"></div>
+        </div>
+        <div id="mdScaledSection" style="display:none;">
+          <div class="field-grid">
+            <div class="fg"><label>Months 1–3 ($)</label><input type="number" id="md1" value="750"></div>
+            <div class="fg"><label>Months 4–6 ($)</label><input type="number" id="md2" value="1000"></div>
+          </div>
+          <div class="field-grid">
+            <div class="fg"><label>Months 7–9 ($)</label><input type="number" id="md3" value="1250"></div>
+            <div class="fg"><label>Months 10–12 ($)</label><input type="number" id="md4" value="1500"></div>
+          </div>
+          <div class="field-grid">
+            <div class="fg"><label>Year 2+ ($)</label><input type="number" id="md5" value="1500"></div>
+            <div></div>
+          </div>
+        </div>
+        <div id="mdHourlyFG" style="display:none;" class="field-grid">
+          <div class="fg"><label>Hourly rate ($)</label><input type="number" id="mdHourlyRate" placeholder="e.g. 55"></div>
+          <div></div>
+        </div>
+        <div class="toggle-row" style="margin-top:10px;">
+          <div><div class="tl-label">Significant Expansion Event renegotiation</div><div class="tl-sub">Triggers comp renegotiation on material practice expansion</div></div>
+          <label class="toggle"><input type="checkbox" id="togExpansion"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Termination notice periods</div>
+        <div class="field-grid">
+          <div class="fg"><label>Practice terminates without cause (days)</label><input type="number" id="pracTermDays" value="120"></div>
+          <div class="fg"><label>Manager terminates without cause (days)</label><input type="number" id="mgrTermDays" value="90"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Provisions & Review -->
+    <div id="s4" class="section">
+      <div class="section-header">
+        <div class="step-pill">Step 5 of 5</div>
+        <h1>Key provisions &amp; review</h1>
+        <p>Confirm all deal-specific toggles, then copy the summary to paste into Claude.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Records &amp; financial</div>
+        <div class="field-grid full" style="margin-bottom:14px;">
+          <div class="fg"><label>Post-termination record ownership</label>
+            <select id="recordOwner">
+              <option value="manager">Manager becomes record owner</option>
+              <option value="practice">Practice retains records</option>
+              <option value="consent">Manager retains with patient consent</option>
+            </select>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <div><div class="tl-label">MSO security interest in Practice A/R</div><div class="tl-sub">MSO-favorable — MSO-Friendly templates</div></div>
+          <label class="toggle"><input type="checkbox" id="togSecInterest"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div class="toggle-row">
+          <div><div class="tl-label">Manager recourse capped to Revenue Account only</div><div class="tl-sub">Practice owes nothing beyond funds in the Revenue Account</div></div>
+          <label class="toggle"><input type="checkbox" id="togRecourse"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div class="toggle-row">
+          <div><div class="tl-label">Manager liable if Revenue Account goes negative</div><div class="tl-sub">Manager bears overdraft risk — MSO-Friendly (physician) template</div></div>
+          <label class="toggle"><input type="checkbox" id="togNegAcct"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div class="toggle-row">
+          <div><div class="tl-label">Manager reimburses MD legal fees</div><div class="tl-sub">MD-Friendly template provision</div></div>
+          <label class="toggle"><input type="checkbox" id="togMDLegal"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div class="toggle-row">
+          <div><div class="tl-label">FDA / compounding pharmacy indemnification</div><div class="tl-sub">Manager indemnifies for compounded GLP-1 medications</div></div>
+          <label class="toggle"><input type="checkbox" id="togFDA"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Insurance</div>
+        <div class="field-grid">
+          <div class="fg"><label>Per-occurrence limit ($)</label><input type="number" id="insPerOcc" value="1000000"></div>
+          <div class="fg"><label>Annual aggregate limit ($)</label><input type="number" id="insAggregate" value="3000000"></div>
+        </div>
+        <div class="toggle-row">
+          <div><div class="tl-label">Manager bears primary insurance obligations</div><div class="tl-sub">NP-Friendly &amp; MD-Friendly templates</div></div>
+          <label class="toggle"><input type="checkbox" id="togMgrInsurance"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Non-compete</div>
+        <div class="toggle-row">
+          <div><div class="tl-label">Include non-compete clause</div><div class="tl-sub">Post-term restriction on Medical Director / Practice Professional</div></div>
+          <label class="toggle"><input type="checkbox" id="togNonCompete" onchange="toggleNC()"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div id="ncDetails" style="display:none;">
+          <div class="field-grid">
+            <div class="fg"><label>Duration (months)</label><input type="number" id="ncDuration" value="12"></div>
+            <div class="fg"><label>Geographic scope</label><input type="text" id="ncGeo" placeholder="e.g. 25-mile radius"></div>
+          </div>
+          <div class="toggle-row">
+            <div><div class="tl-label">Patient notification on departure (§2.08)</div></div>
+            <label class="toggle"><input type="checkbox" id="togPatientNotice"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          </div>
+          <div class="toggle-row">
+            <div><div class="tl-label">Buy-out from non-compete at reasonable price</div></div>
+            <label class="toggle"><input type="checkbox" id="togBuyout"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Additional deal notes</div>
+        <div class="fg"><textarea id="draftingNotes" placeholder="Special instructions, deal points agreed verbally, provisions to customize…"></textarea></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Summary</div>
+        <div class="summary-grid" id="summaryMetrics"></div>
+        <div id="reviewRows"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="nav-bar">
+  <button class="btn" id="btnBack" onclick="goBack()" style="visibility:hidden;">← Back</button>
+  <span class="nav-step" id="stepLabelNav">Step 1 of 5</span>
+  <div style="display:flex; gap:10px; align-items:center;">
+    <button class="btn btn-generate" id="btnGenerate" style="display:none;" onclick="openModal()">Copy MSA summary →</button>
+    <button class="btn btn-primary" id="btnNext" onclick="goNext()">Next →</button>
+  </div>
+</div>
+
+<!-- Output Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>MSA intake summary</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Copy this and paste it into your Claude conversation to generate the MSA drafting briefing sheet.</p>
+      <pre id="summaryOutput"></pre>
+    </div>
+    <div class="modal-footer">
+      <div class="copy-confirm" id="copyConfirm">✓ Copied to clipboard</div>
+      <button class="btn" onclick="closeModal()">Close</button>
+      <button class="btn btn-copy" onclick="copyToClipboard()">Copy to clipboard</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentStep = 0;
+const totalSteps = 5;
+let selectedTemplate = '';
+
+const TEMPLATES = {
+  co_pllc: { rep:'NP Practice only',    law:'New York',          feeType:'flat',        compLabel:'NP comp', mdComp:'flat', mdRate:500,  pracTerm:90,  mgrTerm:90,  records:'manager',  nonCompete:true,  ncDur:12, expansion:true,  mgrInsurance:true,  secInterest:false, negAcct:false, recourse:true,  mdLegal:false },
+  shahzad: { rep:'MD Practice & MSO',   law:'New York',         feeType:'flat',        compLabel:'MD comp', mdComp:'flat', mdRate:1000, pracTerm:120, mgrTerm:90,  records:'consent',  nonCompete:false,           expansion:false, mgrInsurance:false, secInterest:false, negAcct:false, recourse:true,  mdLegal:false },
+  capsule: { rep:'MSO only',            law:'New York',         feeType:'flat',        compLabel:'MD comp', mdComp:'flat', mdRate:1000, pracTerm:120, mgrTerm:90,  records:'practice', nonCompete:false,           expansion:false, mgrInsurance:false, secInterest:true,  negAcct:true,  recourse:true,  mdLegal:false },
+  mck:     { rep:'NP Practice & MSO',   law:'New York',         feeType:'flat',        compLabel:'MD comp', mdComp:'flat', mdRate:1000, pracTerm:120, mgrTerm:90,  records:'manager',  nonCompete:false,           expansion:false, mgrInsurance:false, secInterest:false, negAcct:false, recourse:false, mdLegal:false },
+  nuwell:  { rep:'MD/PC Practice only', law:'New York',         feeType:'perLocation', compLabel:'MD comp', mdComp:'flat', mdRate:1000, pracTerm:30,  mgrTerm:90,  records:'practice', nonCompete:false,           expansion:true,  mgrInsurance:true,  secInterest:false, negAcct:false, recourse:true,  mdLegal:true  },
+  moore:   { rep:'MSO only',     law:'New York',        feeType:'flat',        compLabel:'NP comp', mdComp:'flat', mdRate:500,  pracTerm:120, mgrTerm:90,  records:'manager',  nonCompete:false,           expansion:false, mgrInsurance:false, secInterest:true,  negAcct:false, recourse:true,  mdLegal:false },
+};
+
+const HINTS = {
+  co_pllc: 'Repping NP or NP entity only (not the MSO) · New York · $500/mo NP comp · Expansion Event + Manager pays insurance pre-enabled',
+  shahzad: 'Repping both MSO and MD entity (dual) · New York · $1,000/mo MD comp',
+  capsule: 'MSO-Friendly · counterparty is physician entity · New York · $1,000/mo MD comp · MSO security interest in A/R pre-enabled · Practice retains records',
+  mck:     'Repping both MSO and NP entity (dual) · New York · $1,000/mo MD comp',
+  nuwell:  'Repping MD or MD entity only (not the MSO) · New York · $1,000/mo MD comp · Entity must be PLLC or PC · Expansion Event + Manager pays insurance pre-enabled · 30-day term w/o cause',
+  moore:   'Repping MSO · counterparty is NP-owned Practice · New York · $500/mo NP comp · MSO security interest in A/R pre-enabled',
+};
+
+// Init dots
+function initDots() {
+  const container = document.getElementById('stepDots');
+  for (let i = 0; i < totalSteps; i++) {
+    const d = document.createElement('div');
+    d.className = 'step-dot' + (i === 0 ? ' active' : '');
+    d.id = 'dot' + i;
+    container.appendChild(d);
+  }
+}
+initDots();
+
+function checkMgrEntityName() {
+  const name = (document.getElementById('mgrEntity').value || '').toLowerCase();
+  const warn = document.getElementById('mgrEntityWarning');
+  if (!warn) return;
+  const npTemplates = ['co_pllc', 'moore'];
+  const hasMedical = name.includes('medical');
+  if (hasMedical && npTemplates.includes(selectedTemplate)) {
+    warn.style.display = 'block';
+  } else {
+    warn.style.display = 'none';
+  }
+}
+
+function checkTemplateMismatchFromCred() {
+  const cred = (document.getElementById('pracCred').value || '').toLowerCase();
+  const ownerSel = document.getElementById('ownerType');
+  if (!cred) return;
+  if (cred.includes('m.d') || cred.includes('d.o') || cred.includes('physician')) {
+    if (ownerSel.value !== 'MD / Physician') { ownerSel.value = 'MD / Physician'; }
+  } else if (cred.includes('n.p') || cred.includes('nurse')) {
+    if (ownerSel.value !== 'Nurse Practitioner') { ownerSel.value = 'Nurse Practitioner'; }
+  }
+  checkTemplateMismatch();
+}
+
+function checkTemplateMismatch() {
+  const ownerType = document.getElementById('ownerType').value;
+  const warning   = document.getElementById('mismatchWarning');
+  if (!selectedTemplate || !ownerType) { warning.style.display = 'none'; return; }
+
+  const npTemplates = ['co_pllc', 'moore'];
+  const mdTemplates = ['shahzad', 'capsule', 'mck', 'nuwell'];
+  const isNpTemplate = npTemplates.includes(selectedTemplate);
+  const isMdTemplate = mdTemplates.includes(selectedTemplate);
+  const ownerIsMD = ownerType === 'MD / Physician' || ownerType === 'Physician Assistant';
+  const ownerIsNP = ownerType === 'Nurse Practitioner';
+
+  const tplNames = {
+    co_pllc:'NP-Friendly Template (NP entity only)', shahzad:'Balanced Template (MSO + MD entity)', capsule:'MSO-Friendly Template (physician counterparty)',
+    mck:'Balanced Template (MSO + NP entity)', nuwell:'MD-Friendly Template (MD entity only)', moore:'MSO-Friendly Template (NP counterparty)'
+  };
+
+  let mismatch = false;
+  let expected = '', actual = '', suggestion = '';
+
+  if (isNpTemplate && ownerIsMD) {
+    mismatch = true;
+    expected = 'NP';
+    actual   = ownerType;
+    suggestion = 'use the <strong>Balanced Template (MSO + MD entity)</strong> or the <strong>MD-Friendly Template</strong> depending on who you represent';
+  } else if (isMdTemplate && ownerIsNP) {
+    mismatch = true;
+    expected = 'MD';
+    actual   = 'Nurse Practitioner';
+    if (selectedTemplate === 'shahzad') {
+      suggestion = 'use the <strong>NP-Friendly Template</strong> or the <strong>Balanced Template (MSO + NP entity)</strong> depending on who you represent';
+    } else if (selectedTemplate === 'capsule') {
+      suggestion = 'use the <strong>MSO-Friendly Template (NP counterparty)</strong>';
+    } else if (selectedTemplate === 'mck') {
+      mismatch = false;
+    } else if (selectedTemplate === 'nuwell') {
+      suggestion = 'use the <strong>NP-Friendly Template</strong> or the <strong>Balanced Template (MSO + NP entity)</strong> depending on who you represent';
+    }
+  }
+
+  if (mismatch) {
+    document.getElementById('mismatchExpected').textContent = expected;
+    document.getElementById('mismatchActual').textContent   = actual;
+    document.getElementById('mismatchSuggestion').innerHTML = suggestion;
+    warning.style.display = 'block';
+  } else {
+    warning.style.display = 'none';
+  }
+}
+
+function checkEntityType() {
+  const entityType = document.getElementById('entityType').value;
+  const ownerType  = document.getElementById('ownerType').value;
+  const warn       = document.getElementById('entityTypeWarning');
+  if (!warn) return;
+  const isLLCOrInc = entityType === 'LLC' || entityType === 'Corporation (Inc. / PC)';
+  const isMedical  = ownerType === 'MD / Physician' || ownerType === 'Nurse Practitioner' || ownerType === 'Physician Assistant';
+  // Always warn if LLC/Inc selected for templates 3A or 3B, or any NY medical practice
+  if (isLLCOrInc && (selectedTemplate === 'nuwell' || selectedTemplate === 'co_pllc' || isMedical)) {
+    warn.style.display = 'block';
+  } else {
+    warn.style.display = 'none';
+  }
+}
+
+function selectTemplate(key, el) {
+  selectedTemplate = key;
+  document.querySelectorAll('.tpl-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  const hint = document.getElementById('tplCallout');
+  hint.className = 'callout callout-info';
+  hint.innerHTML = HINTS[key];
+  hint.style.display = 'block';
+}
+
+function prefillFromTemplate() {
+  if (!selectedTemplate) return;
+  const t = TEMPLATES[selectedTemplate];
+  if (t.law) { document.getElementById('govState').value = t.law; document.getElementById('mgrState').value = t.law; }
+  document.getElementById('initialTerm').value  = '12mo';
+  document.getElementById('mgmtFee').value      = 10000;
+  document.getElementById('feeStructure').value = t.feeType;
+  document.getElementById('pracTermDays').value = t.pracTerm;
+  document.getElementById('mgrTermDays').value  = t.mgrTerm;
+  document.getElementById('mdCompType').value   = t.mdComp; toggleMDComp();
+  document.getElementById('mdFlatRate').value   = t.mdRate;
+  document.getElementById('recordOwner').value  = t.records;
+  document.getElementById('togNonCompete').checked   = !!t.nonCompete;
+  if (t.nonCompete) { document.getElementById('ncDuration').value = t.ncDur || 12; toggleNC(); }
+  document.getElementById('togExpansion').checked    = !!t.expansion;
+  document.getElementById('togMgrInsurance').checked = !!t.mgrInsurance;
+  document.getElementById('togSecInterest').checked  = !!t.secInterest;
+  document.getElementById('togRecourse').checked     = !!t.recourse;
+  document.getElementById('togNegAcct').checked      = !!t.negAcct;
+  document.getElementById('togMDLegal').checked      = !!t.mdLegal;
+
+  const lbl = document.getElementById('tplCompHint');
+  lbl.innerHTML = 'Defaults pre-filled for <strong>' + t.rep + '</strong> — ' + t.compLabel + ': $' + Number(t.mdRate).toLocaleString() + '/mo. Adjust any fields for this deal.';
+  lbl.style.display = 'block';
+}
+
+function toggleMDComp() {
+  const v = document.getElementById('mdCompType').value;
+  document.getElementById('mdFlatFG').style.display        = v === 'flat'   ? 'flex'  : 'none';
+  document.getElementById('mdScaledSection').style.display = v === 'scaled' ? 'block' : 'none';
+  document.getElementById('mdHourlyFG').style.display      = v === 'hourly' ? 'grid'  : 'none';
+}
+
+function toggleNC() {
+  document.getElementById('ncDetails').style.display = document.getElementById('togNonCompete').checked ? 'block' : 'none';
+}
+
+document.getElementById('initialTerm').addEventListener('change', function() {
+  document.getElementById('customTermRow').style.display   = this.value === 'custom' ? 'grid' : 'none';
+  document.getElementById('renewalNoticeFG').style.display = this.value === 'custom' ? 'none' : 'flex';
+});
+
+function goNext() {
+  if (currentStep === 0 && !selectedTemplate) { alert('Please select a template first.'); return; }
+  if (currentStep === 0) prefillFromTemplate();
+  if (currentStep < totalSteps - 1) {
+    setStep(currentStep + 1);
+    if (currentStep === totalSteps - 1) buildReview();
+  }
+}
+
+function goBack() {
+  if (currentStep > 0) setStep(currentStep - 1);
+}
+
+function jumpTo(n) {
+  if (n === 0 || n <= currentStep) setStep(n);
+}
+
+function setStep(n) {
+  document.getElementById('s' + currentStep).classList.remove('active');
+  currentStep = n;
+  document.getElementById('s' + currentStep).classList.add('active');
+  if (currentStep === totalSteps - 1) buildReview();
+  updateUI();
+  window.scrollTo(0, 0);
+}
+
+function updateUI() {
+  // Dots
+  for (let i = 0; i < totalSteps; i++) {
+    const d = document.getElementById('dot' + i);
+    d.className = 'step-dot' + (i < currentStep ? ' done' : i === currentStep ? ' active' : '');
+  }
+  // Sidebar
+  const steps = document.querySelectorAll('.sidebar-step');
+  steps.forEach((s, i) => {
+    s.className = 'sidebar-step' + (i < currentStep ? ' done' : i === currentStep ? ' active' : '');
+  });
+  // Labels
+  const label = 'Step ' + (currentStep + 1) + ' of ' + totalSteps;
+  document.getElementById('stepLabelHdr').textContent = label;
+  document.getElementById('stepLabelNav').textContent = label;
+  // Buttons
+  document.getElementById('btnBack').style.visibility = currentStep === 0 ? 'hidden' : 'visible';
+  document.getElementById('btnNext').style.display    = currentStep === totalSteps - 1 ? 'none' : 'inline-block';
+  document.getElementById('btnGenerate').style.display = currentStep === totalSteps - 1 ? 'inline-block' : 'none';
+}
+
+function g(id)   { return (document.getElementById(id) || {}).value || ''; }
+function chk(id) { return (document.getElementById(id) || {}).checked || false; }
+function fmt(n)  { return n ? '$' + Number(n).toLocaleString() : '—'; }
+
+function buildReview() {
+  const termMap = { '12mo':'12 months', '6mo':'6 months', '24mo':'24 months', 'custom': g('customTermVal') + ' months' };
+  const mdMap   = { flat: fmt(g('mdFlatRate')) + '/mo', scaled:'$750→$1,000→$1,250→$1,500/mo', hourly: fmt(g('mdHourlyRate')) + '/hr', blank:'TBD' };
+  const feeDisp = g('feeStructure') === 'blank' ? 'TBD' : fmt(g('mgmtFee')) + (g('feeStructure') === 'perLocation' ? '/location' : '/mo');
+  const t = TEMPLATES[selectedTemplate] || {};
+
+  document.getElementById('summaryMetrics').innerHTML = [
+    { label:'Template',   value: selectedTemplate.replace('_',' ').toUpperCase() },
+    { label:'Represents', value: t.rep || '—' },
+    { label:'Mgmt fee',   value: feeDisp, accent:true },
+    { label: t.compLabel||'Prof comp', value: mdMap[g('mdCompType')] || '—', accent:true },
+  ].map(m => `<div class="metric"><div class="metric-label">${m.label}</div><div class="metric-value${m.accent?' accent':''}">${m.value}</div></div>`).join('');
+
+  const rows = [
+    ['Manager',                      (g('mgrEntity')||'—') + (g('mgrDBA') ? ' d/b/a ' + g('mgrDBA') : '')],
+    ['Manager signatory',            (g('mgrOwner')||'—') + (g('mgrTitle') ? ', ' + g('mgrTitle') : '')],
+    ['Practice',                     (g('pracEntity')||'—') + (g('entityType') ? ' (' + g('entityType') + ')' : '')],
+    ['Practice owner',               (g('pracOwner')||'—') + (g('pracCred') ? ', ' + g('pracCred') : '')],
+    ['Medical Director / Prof',      (g('mdName')||'same as owner') + (g('mdCred') ? ', ' + g('mdCred') : '')],
+    ['Consulting entity',            g('mdConsultCo') || 'N/A'],
+    ['Effective date',               g('effectiveDate') || '—'],
+    ['Initial term',                 termMap[g('initialTerm')] || '—'],
+    ['Governing state',              g('govState') || '—'],
+    ['Arbitration',                  g('arbCounty') ? g('arbCounty') + ' County' : '—'],
+    ['Premises',                     g('premisesAddress') || '—'],
+    ['Locations',                    g('locationCount') || '1'],
+    ['Practice term w/o cause',      g('pracTermDays') + ' days'],
+    ['Manager term w/o cause',       g('mgrTermDays') + ' days'],
+    ['Record ownership',             g('recordOwner')],
+    ['Non-compete',                  chk('togNonCompete') ? g('ncDuration') + ' mo · ' + (g('ncGeo')||'scope TBD') : 'None'],
+    ['Expansion Event clause',       chk('togExpansion')    ? 'Yes' : 'No'],
+    ['Manager bears insurance',      chk('togMgrInsurance') ? 'Yes' : 'No'],
+    ['MSO security interest in A/R', chk('togSecInterest')  ? 'Yes' : 'No'],
+    ['Manager recourse capped',      chk('togRecourse')     ? 'Yes' : 'No'],
+    ['Acct negative liability',      chk('togNegAcct')      ? 'Yes' : 'No'],
+    ['Manager reimburses MD legal',  chk('togMDLegal')      ? 'Yes' : 'No'],
+    ['FDA/compounding indem.',       chk('togFDA')          ? 'Yes' : 'No'],
+    ['Insurance',                    fmt(g('insPerOcc')) + ' / ' + fmt(g('insAggregate'))],
+  ];
+
+  document.getElementById('reviewRows').innerHTML = rows.map(([k,v]) =>
+    `<div class="review-row"><span class="review-key">${k}</span><span class="review-val">${v}</span></div>`
+  ).join('');
+}
+
+function buildSummaryText() {
+  const t = TEMPLATES[selectedTemplate] || {};
+  const termMap = { '12mo':'12 months', '6mo':'6 months', '24mo':'24 months', 'custom': g('customTermVal') + ' months' };
+  const mdMap   = { flat: fmt(g('mdFlatRate')) + '/month', scaled:'$750→$1,000→$1,250→$1,500/month (escalating)', hourly: fmt(g('mdHourlyRate')) + '/hour', blank:'TBD' };
+  const feeDisp = g('feeStructure') === 'blank' ? 'TBD' : fmt(g('mgmtFee')) + (g('feeStructure') === 'perLocation' ? '/location × ' + (g('locationCount')||1) + ' location(s)' : '/month (fixed flat)');
+  const notes   = g('draftingNotes');
+
+  return `MSA intake complete. Here are all the inputs:
+
+TEMPLATE: ${selectedTemplate.toUpperCase()} — Represents: ${t.rep||'—'}
+
+PARTIES
+Manager: ${g('mgrEntity')||'[TBD]'} d/b/a ${g('mgrDBA')||'[TBD]'} (${g('mgrState')||'[state]'}) — Signatory: ${g('mgrOwner')||'[TBD]'}, ${g('mgrTitle')||'Owner'}
+Practice: ${g('pracEntity')||'[TBD]'} (${g('entityType')||'[type]'}) — Owner: ${g('pracOwner')||'[TBD]'} ${g('pracCred')||''}
+Medical Director / Prof: ${g('mdName')||'same as owner'} ${g('mdCred')||''}${g('mdConsultCo') ? ' — comp via ' + g('mdConsultCo') : ''}
+
+DATES & TERM
+Effective: ${g('effectiveDate')||'[TBD]'} | Initial term: ${termMap[g('initialTerm')]||'12 months'} | Non-renewal notice: ${g('renewalNotice')||90} days
+ICA date: ${g('icaDate')||'[TBD]'} | Governing state: ${g('govState')||'[TBD]'} | Arbitration: ${g('arbCounty')||'[TBD]'} County
+Premises: ${g('premisesAddress')||'[TBD]'} | Locations: ${g('locationCount')||1}
+
+COMPENSATION
+Management fee: ${feeDisp}
+${t.compLabel||'Prof comp'}: ${mdMap[g('mdCompType')]||'TBD'}${chk('togExpansion') ? ' + Significant Expansion Event clause' : ''}
+Practice terminates w/o cause: ${g('pracTermDays')||120} days | Manager terminates w/o cause: ${g('mgrTermDays')||90} days
+
+KEY PROVISIONS
+Post-term records: ${g('recordOwner')} | Non-compete: ${chk('togNonCompete') ? g('ncDuration') + ' mo, ' + (g('ncGeo')||'scope TBD') : 'none'}
+Manager bears insurance: ${chk('togMgrInsurance') ? 'yes' : 'no'} | MSO security interest in A/R: ${chk('togSecInterest') ? 'yes' : 'no'}
+Manager recourse capped to Revenue Account: ${chk('togRecourse') ? 'yes' : 'no'} | Manager liable if acct negative: ${chk('togNegAcct') ? 'yes' : 'no'}
+Manager reimburses MD legal fees: ${chk('togMDLegal') ? 'yes' : 'no'} | FDA/compounding indemnification: ${chk('togFDA') ? 'yes' : 'no'}
+Patient notification on departure: ${chk('togPatientNotice') ? 'yes' : 'no'} | Non-compete buyout: ${chk('togBuyout') ? 'yes' : 'no'}
+Insurance: ${fmt(g('insPerOcc'))} per occ / ${fmt(g('insAggregate'))} aggregate
+${notes ? '\nADDITIONAL NOTES: ' + notes : ''}
+
+Please produce a complete MSA drafting briefing sheet for this deal using the ${selectedTemplate.toUpperCase()} template. Include: (1) a deal summary, (2) all blanks to fill with the values above, (3) any provisions to toggle on/off based on the inputs, (4) any gaps or missing information that still needs to be collected, and (5) any red flags or items to flag for attorney review.`;
+}
+
+function openModal() {
+  buildReview();
+  document.getElementById('summaryOutput').textContent = buildSummaryText();
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('copyConfirm').classList.remove('show');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function copyToClipboard() {
+  const text = document.getElementById('summaryOutput').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('copyConfirm').classList.add('show');
+    setTimeout(() => document.getElementById('copyConfirm').classList.remove('show'), 2500);
+  });
+}
+
+// Close modal on overlay click
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
